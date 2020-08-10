@@ -24,9 +24,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
       - name: Get Chez Scheme
-        run: | 
+        run: |
           git clone --depth 1 https://github.com/cisco/ChezScheme
-          c:\msys64\usr\bin\bash -l -c "pacman -S --noconfirm tar make"
+          c:\msys64\usr\bin\bash -l -c "pacman -S --noconfirm tar make zip"
           echo "::set-env name=PWD::$(c:\msys64\usr\bin\cygpath -u $(pwd))"
       - name: Configure and Build Chez Scheme
         run: |
@@ -35,12 +35,26 @@ jobs:
         run: |
           $chez="$(pwd)\ChezScheme\ta6nt\bin\ta6nt"
           $idris="$(pwd)\.idris2"
+          $output="$(pwd)\output"
           echo "::add-path::$chez"
           echo "::add-path::$idris\bin"
           echo "::set-env name=IDRIS_PREFIX::$idris"
           echo "::set-env name=PREFIX::$(c:\msys64\usr\bin\cygpath -u $idris)"
+          echo "::set-env name=OUTPUT::$output"
       - name: Test Scheme
         run: |
           scheme --version
       - name: Bootstrap and install
         run: c:\msys64\usr\bin\bash -l -c "cd $env:PWD && make bootstrap && make install"
+      - name: Prepare output data to upload
+        run: |
+          c:\msys64\usr\bin\bash -l -c "cd $env:PWD && mkdir -p output/idris2-windows-nightly"
+          c:\msys64\usr\bin\bash -l -c "cd $env:PWD/output/idris2-windows-nightly && mkdir chez idris2"
+          c:\msys64\usr\bin\bash -l -c "cd $env:PWD && mv -t output/idris2-windows-nightly configure.ps1"
+          c:\msys64\usr\bin\bash -l -c "cd $env:PWD && mv -t output/idris2-windows-nightly/chez ChezScheme/ta6nt/bin ChezScheme/ta6nt/boot"
+          c:\msys64\usr\bin\bash -l -c "cd $env:PWD && mv -t output/idris2-windows-nightly/idris2 .idris2 bootstrap"
+      - name: Upload a build artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: idris2-windows-nightly 
+          path: ${{env.OUTPUT}}/
